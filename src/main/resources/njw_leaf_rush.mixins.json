@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.njw.leafrush.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "LevelAirTransitionMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
