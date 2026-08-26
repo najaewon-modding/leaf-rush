@@ -12,7 +12,7 @@ Leaf Rush는 나무를 베었을 때 원목과 연결이 끊어진 나뭇잎이 
 ## Requirements
 
 - Minecraft 26.1.2
-- NeoForge 26.1.2.98+
+- NeoForge 26.1.2.97+
 
 ## License
 
