@@ -9,10 +9,6 @@ on:
         description: Existing GitHub Release tag to publish to CurseForge
         required: true
         type: string
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/publish-curseforge.yml'
 
 permissions:
   contents: read
@@ -25,10 +21,6 @@ env:
 
 jobs:
   publish:
-    if: >-
-      github.event_name == 'release' ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && github.event.head_commit.message == 'ci: add CurseForge publishing workflow')
     runs-on: ubuntu-latest
     steps:
       - name: Publish GitHub Release asset to CurseForge
@@ -113,9 +105,6 @@ jobs:
 
           if [ "$GITHUB_EVENT_NAME" = "release" ]; then
             publish_tag "$RELEASE_TAG"
-          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            publish_tag "$MANUAL_TAG"
           else
-            # One-time backfill while this workflow is introduced. Removed after a successful run.
-            publish_tag "v1.0.0"
+            publish_tag "$MANUAL_TAG"
           fi
