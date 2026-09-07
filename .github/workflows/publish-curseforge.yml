@@ -68,7 +68,7 @@ jobs:
               exit 1
             fi
 
-            local display_name changelog release_type metadata response
+            local display_name changelog release_type metadata response_file response http_code
             display_name="$(jq -r '.name // empty' <<<"$release_json")"
             if [ -z "$display_name" ]; then
               display_name="Leaf Rush ${tag#v}"
@@ -91,14 +91,22 @@ jobs:
               --arg releaseType "$release_type" \
               '{changelog:$changelog,changelogType:"markdown",displayName:$displayName,gameVersionNames:[$minecraft,$loader],releaseType:$releaseType}')"
 
-            response="$(curl --fail-with-body --silent --show-error \
+            response_file="$(mktemp)"
+            http_code="$(curl --silent --show-error \
+              -o "$response_file" \
+              -w '%{http_code}' \
               -X POST \
               -H "X-Api-Token: $CURSEFORGE_TOKEN" \
               -F "metadata=$metadata" \
               -F "file=@$jar" \
               "https://minecraft.curseforge.com/api/projects/${CURSEFORGE_PROJECT_ID}/upload-file")"
+            response="$(cat "$response_file")"
+            rm -f "$response_file"
 
-            echo "CurseForge response: $response"
+            echo "CurseForge response ($http_code): $response"
+            if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+              exit 1
+            fi
           }
 
           if [ "$GITHUB_EVENT_NAME" = "release" ]; then
