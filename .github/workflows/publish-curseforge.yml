@@ -83,7 +83,7 @@ jobs:
               release_type="release"
             fi
 
-            metadata="$(jq -n \
+            metadata="$(jq -cn \
               --arg changelog "$changelog" \
               --arg displayName "$display_name" \
               --arg minecraft "$MINECRAFT_VERSION" \
@@ -97,7 +97,7 @@ jobs:
               -w '%{http_code}' \
               -X POST \
               -H "X-Api-Token: $CURSEFORGE_TOKEN" \
-              -F "metadata=$metadata" \
+              --form-string "metadata=$metadata" \
               -F "file=@$jar" \
               "https://minecraft.curseforge.com/api/projects/${CURSEFORGE_PROJECT_ID}/upload-file")"
             response="$(cat "$response_file")"
