@@ -1,0 +1,111 @@
+name: Publish to CurseForge
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing GitHub Release tag to publish to CurseForge
+        required: true
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-curseforge.yml'
+
+permissions:
+  contents: read
+
+env:
+  CURSEFORGE_PROJECT_ID: '1669387'
+  MINECRAFT_VERSION: '26.1.2'
+  MOD_LOADER: 'NeoForge'
+
+jobs:
+  publish:
+    if: >-
+      github.event_name == 'release' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.event.head_commit.message == 'ci: add CurseForge publishing workflow')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish GitHub Release asset to CurseForge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          MANUAL_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CURSEFORGE_TOKEN:-}" ]; then
+            echo "CURSEFORGE_TOKEN is not available to this repository."
+            exit 1
+          fi
+
+          publish_tag() {
+            local tag="$1"
+            local workdir="dist/${tag//\//_}"
+            rm -rf "$workdir"
+            mkdir -p "$workdir"
+
+            echo "Publishing GitHub Release $tag to CurseForge..."
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.jar' --dir "$workdir"
+
+            mapfile -t jars < <(find "$workdir" -maxdepth 1 -type f -name '*.jar' -print)
+            if [ "${#jars[@]}" -ne 1 ]; then
+              echo "Expected exactly one JAR asset in $tag, found ${#jars[@]}."
+              exit 1
+            fi
+            local jar="${jars[0]}"
+
+            local release_json
+            release_json="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json name,body,isPrerelease,isDraft)"
+            if [ "$(jq -r '.isDraft' <<<"$release_json")" = "true" ]; then
+              echo "$tag is a draft release; refusing to publish."
+              exit 1
+            fi
+
+            local display_name changelog release_type metadata response
+            display_name="$(jq -r '.name // empty' <<<"$release_json")"
+            if [ -z "$display_name" ]; then
+              display_name="Leaf Rush ${tag#v}"
+            fi
+            changelog="$(jq -r '.body // empty' <<<"$release_json")"
+            if [ -z "$changelog" ]; then
+              changelog="See GitHub Release $tag for details."
+            fi
+            if [ "$(jq -r '.isPrerelease' <<<"$release_json")" = "true" ]; then
+              release_type="beta"
+            else
+              release_type="release"
+            fi
+
+            metadata="$(jq -n \
+              --arg changelog "$changelog" \
+              --arg displayName "$display_name" \
+              --arg minecraft "$MINECRAFT_VERSION" \
+              --arg loader "$MOD_LOADER" \
+              --arg releaseType "$release_type" \
+              '{changelog:$changelog,changelogType:"markdown",displayName:$displayName,gameVersionNames:[$minecraft,$loader],releaseType:$releaseType}')"
+
+            response="$(curl --fail-with-body --silent --show-error \
+              -X POST \
+              -H "X-Api-Token: $CURSEFORGE_TOKEN" \
+              -F "metadata=$metadata" \
+              -F "file=@$jar" \
+              "https://minecraft.curseforge.com/api/projects/${CURSEFORGE_PROJECT_ID}/upload-file")"
+
+            echo "CurseForge response: $response"
+          }
+
+          if [ "$GITHUB_EVENT_NAME" = "release" ]; then
+            publish_tag "$RELEASE_TAG"
+          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            publish_tag "$MANUAL_TAG"
+          else
+            # One-time backfill while this workflow is introduced. Removed after a successful run.
+            publish_tag "v1.0.0"
+          fi
