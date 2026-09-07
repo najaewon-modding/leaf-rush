@@ -18,6 +18,7 @@ env:
   MINECRAFT_VERSION: '26.1.2'
   MOD_LOADER: 'NeoForge'
   ENVIRONMENT: 'Server'
+  JAVA_VERSION: 'Java 25'
 
 jobs:
   publish:
@@ -82,8 +83,9 @@ jobs:
               --arg minecraft "$MINECRAFT_VERSION" \
               --arg loader "$MOD_LOADER" \
               --arg environment "$ENVIRONMENT" \
+              --arg java "$JAVA_VERSION" \
               --arg releaseType "$release_type" \
-              '{changelog:$changelog,changelogType:"markdown",displayName:$displayName,gameVersionNames:[$minecraft,$loader,$environment],releaseType:$releaseType}')"
+              '{changelog:$changelog,changelogType:"markdown",displayName:$displayName,gameVersionNames:[$minecraft,$loader,$environment,$java],releaseType:$releaseType}')"
 
             response_file="$(mktemp)"
             http_code="$(curl --silent --show-error \
