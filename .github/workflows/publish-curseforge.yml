@@ -21,6 +21,7 @@ env:
   CURSEFORGE_PROJECT_ID: '1669387'
   MINECRAFT_VERSION: '26.1.2'
   MOD_LOADER: 'NeoForge'
+  ENVIRONMENT: 'Server'
 
 jobs:
   publish:
@@ -88,8 +89,9 @@ jobs:
               --arg displayName "$display_name" \
               --arg minecraft "$MINECRAFT_VERSION" \
               --arg loader "$MOD_LOADER" \
+              --arg environment "$ENVIRONMENT" \
               --arg releaseType "$release_type" \
-              '{changelog:$changelog,changelogType:"markdown",displayName:$displayName,gameVersionNames:[$minecraft,$loader],releaseType:$releaseType}')"
+              '{changelog:$changelog,changelogType:"markdown",displayName:$displayName,gameVersionNames:[$minecraft,$loader,$environment],releaseType:$releaseType}')"
 
             response_file="$(mktemp)"
             http_code="$(curl --silent --show-error \
